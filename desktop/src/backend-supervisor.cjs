@@ -28,6 +28,12 @@ const GATEWAY_KEYS = [
 
 function devBackendTarget({ repoRoot, port, stateDir, env = process.env }) {
   const config = env.OPEN_SWE_LOCAL_BACKEND_CONFIG || "langgraph.desktop.json";
+  const base = path.resolve(repoRoot);
+  const target = path.resolve(base, config);
+  const relative = path.relative(base, target);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error('Invalid configuration path');
+  }
   return {
     command:
       env.OPEN_SWE_LOCAL_BACKEND_COMMAND || env.OPEN_SWE_UV_COMMAND || "uv",
@@ -45,7 +51,7 @@ function devBackendTarget({ repoRoot, port, stateDir, env = process.env }) {
       "--n-jobs-per-worker",
       JOBS_PER_WORKER,
       "--config",
-      path.resolve(repoRoot, config),
+      target,
     ],
     cwd: stateDir || repoRoot,
   };
@@ -63,6 +69,12 @@ function packagedBackendTarget({
     "runtime",
     platform === "win32" ? "python.exe" : "bin/python3",
   );
+  const baseDir = path.resolve(root);
+  const configPath = path.resolve(baseDir, "langgraph.json");
+  const relativePath = path.relative(baseDir, configPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    throw new Error('Invalid configuration path');
+  }
   return {
     command: executable,
     args: [
@@ -78,7 +90,7 @@ function packagedBackendTarget({
       "--n-jobs-per-worker",
       JOBS_PER_WORKER,
       "--config",
-      path.join(root, "langgraph.json"),
+      configPath,
     ],
     cwd: stateDir || root,
   };
