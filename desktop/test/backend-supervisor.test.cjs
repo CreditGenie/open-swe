@@ -37,16 +37,16 @@ test("development target isolates repository LangGraph state", () => {
   });
 });
 
-test("development target accepts an explicit LangGraph config", () => {
+test("development target accepts an explicit LangGraph config within repo", () => {
   const repoRoot = path.resolve("/work/open-swe");
-  const config = path.resolve("/work/e2e/langgraph.json");
+  const config = "custom/langgraph.json";
   const target = devBackendTarget({
     repoRoot,
     port: 49152,
     env: { OPEN_SWE_LOCAL_BACKEND_CONFIG: config },
   });
 
-  assert.equal(target.args.at(-1), config);
+  assert.equal(target.args.at(-1), path.resolve(repoRoot, config));
 });
 
 test("reports whether the selected provider is configured", () => {
@@ -206,5 +206,61 @@ test("packaged target runs the bundled backend", () => {
       platform: "darwin",
     }),
     target,
+  );
+});
+
+test("devBackendTarget rejects path traversal with ../", () => {
+  const repoRoot = path.resolve("/work/open-swe");
+  assert.throws(
+    () =>
+      devBackendTarget({
+        repoRoot,
+        port: 49152,
+        env: { OPEN_SWE_LOCAL_BACKEND_CONFIG: "../../../etc/passwd" },
+      }),
+    /Invalid configuration path/,
+  );
+});
+
+test("devBackendTarget rejects absolute path traversal", () => {
+  const repoRoot = path.resolve("/work/open-swe");
+  assert.throws(
+    () =>
+      devBackendTarget({
+        repoRoot,
+        port: 49152,
+        env: { OPEN_SWE_LOCAL_BACKEND_CONFIG: "/etc/passwd" },
+      }),
+    /Invalid configuration path/,
+  );
+});
+
+test("devBackendTarget allows safe relative paths", () => {
+  const repoRoot = path.resolve("/work/open-swe");
+  const target = devBackendTarget({
+    repoRoot,
+    port: 49152,
+    env: { OPEN_SWE_LOCAL_BACKEND_CONFIG: "config/langgraph.json" },
+  });
+  assert.equal(
+    target.args.at(-1),
+    path.resolve(repoRoot, "config/langgraph.json"),
+  );
+});
+
+test("packagedBackendTarget validates config path stays within root", () => {
+  const resourcesPath = path.resolve(
+    "/Applications/Open SWE.app/Contents/Resources",
+  );
+  // The packagedBackendTarget always uses "langgraph.json" hardcoded,
+  // so it should not throw for normal usage
+  const target = packagedBackendTarget({
+    resourcesPath,
+    port: 50000,
+    platform: "darwin",
+  });
+  assert.equal(
+    target.args.at(-1),
+    path.resolve(resourcesPath, "local-backend/langgraph.json"),
   );
 });
