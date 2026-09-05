@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from weakref import WeakValueDictionary
 from xml.etree import ElementTree
+from defusedxml import ElementTree as DefusedET
 
 from langchain_core.messages import BaseMessage
 from langgraph_sdk import get_client
@@ -85,7 +86,7 @@ def _input_message_kind(content: object) -> str | None:
         if not isinstance(text, str) or "<input-message" not in text:
             continue
         try:
-            root = ElementTree.fromstring(text)
+            root = DefusedET.fromstring(text)
         except ElementTree.ParseError:
             continue
         messages = [root] if root.tag == "input-message" else root.findall(".//input-message")

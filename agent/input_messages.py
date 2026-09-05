@@ -6,6 +6,8 @@ from html import escape
 from typing import Any, Literal, NotRequired, TypedDict, cast
 from xml.etree import ElementTree
 
+from defusedxml import ElementTree as DefusedET
+
 from langchain_core.messages import AnyMessage, BaseMessage
 
 INJECTED_DYNAMIC_CONTEXT_HASHES_KEY = "injected_dynamic_context_hashes"
@@ -157,7 +159,7 @@ def dynamic_context_hash(content: object) -> str | None:
         if not isinstance(text, str) or "<dynamic-context" not in text:
             continue
         try:
-            root = ElementTree.fromstring(text)
+            root = DefusedET.fromstring(text)
         except ElementTree.ParseError:
             continue
         if root.tag != "dynamic-context":
